@@ -1,8 +1,7 @@
 # Prometheus
-Foobar is a Python library for dealing with word pluralization.
+
 
 ## Realizando o download 
-
 
 ```bash
 curl -LO https://github.com/prometheus/prometheus/releases/download/v2.38.0/prometheus-2.38.0.linux-amd64.tar.gz
