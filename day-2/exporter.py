@@ -1,58 +1,80 @@
-import requests # Importa o módulo requests para fazer requisições HTTP
-import json # Importa o módulo json para converter o resultado em JSON
-import time # Importa o módulo time para fazer o sleep
-from prometheus_client import start_http_server, Gauge # Importa o módulo Gauge do Prometheus para criar a nossa métrica e o módulo start_http_server para iniciar o servidor
+import requests
+import json
+import time
+from prometheus_client import start_http_server, Gauge
 
-url_numero_pessoas = 'http://api.open-notify.org/astros.json' # URL para pegar o número de astronautas
+url_numero_pessoas = "http://api.open-notify.org/astros.json"
+url_local_ISS = "http://api.open-notify.org/iss-now.json"
 
-def pega_numero_astronautas(): # Função para pegar o número de astronautas
-    try: # Tenta fazer a requisição HTTP
-        """
-        Pegar o número de astronautas no espaço 
-        """
-        response = requests.get(url_numero_pessoas) # Faz a requisição HTTP
-        data = response.json() # Converte o resultado em JSON
-        return data['number'] # Retorna o número de astronautas
-    except Exception as e: # Se der algum erro
-        print("Não foi possível acessar a url!") # Imprime que não foi possível acessar a url
-        raise e # Lança a exceção
-
-def atualiza_metricas(): # Função para atualizar as métricas
+def pega_local_ISS():
     try:
         """
-        Atualiza as métricas com o número de astronautas e local da estação espacial internacional
+        Pegar o local atual da ISS
         """
-        numero_pessoas = Gauge('numero_de_astronautas', 'Número de astronautas no espaço') # Cria a métrica
-        
-        while True: # Enquanto True
-            numero_pessoas.set(pega_numero_astronautas()) # Atualiza a métrica com o número de astronautas
-            time.sleep(10) # Faz o sleep de 10 segundos
-            print("O número atual de astronautas no espaço é: %s" % pega_numero_astronautas()) # Imprime o número de astronautas no espaço
-    except Exception as e: # Se der algum erro
-        print("A quantidade de astronautas não pode ser atualizada!") # Imprime que não foi possível atualizar a quantidade de astronautas
-        raise e # Lança a exceção
-        
-def inicia_exporter(): # Função para iniciar o exporter
+        response = requests.get(url_local_ISS)
+        data = response.json()
+        return data['iss_position']
+    except Exception as e:
+        print("Tivemos problema para acessar a URL para capturar a localização")
+        raise e
+
+def pega_numero_astronautas():
     try:
         """
-        Iniciar o exporter
+        Pegar o número de astronautas que esão no espaço!
         """
-        start_http_server(8899) # Inicia o servidor do Prometheus na porta 8899
-        return True # Retorna True
-    except Exception as e: # Se der algum erro
-        print("O Servidor não pode ser iniciado!") # Imprime que não foi possível iniciar o servidor
-        raise e # Lança a exceção
+        response = requests.get(url_numero_pessoas)
+        data = response.json()
+        return data['number']
+    except Exception as e:
+        print("Tivemos problema para acessar a URL")
+        raise e
 
-def main(): # Função principal
+
+def atualiza_metricas():
     try:
-        inicia_exporter() # Inicia o exporter
-        print('Exporter Iniciado') # Imprime que o exporter foi iniciado
-        atualiza_metricas() # Atualiza as métricas
-    except Exception as e: # Se der algum erro
-        print('\nExporter Falhou e Foi Finalizado! \n\n======> %s\n' % e) # Imprime que o exporter falhou e foi finalizado
-        exit(1) # Finaliza o programa com erro
+        """
+        Atualiza a metrica com o número de astronautas no espaço e a localização da ISS
+        """
+        numero_pessoas = Gauge('numero_de_astronautas', 'Número de astronautas no espaço')
+        longitude = Gauge('longitude_iss', 'longitude atual da ISS')
+        latitude = Gauge('latitude_iss', 'latitude atual da ISS')
+        while True:
+            numero_pessoas.set(pega_numero_astronautas())
+            longitude.set(pega_local_ISS()['longitude'])
+            latitude.set(pega_local_ISS()['latitude'])
+            time.sleep(10)
+            print("O número de Astronautas no espaço nesse momento é: %s" % pega_numero_astronautas())
+            print("A longitude atual da ISS é: %s" % pega_local_ISS()['longitude'])
+            print("A latitude atual da ISS é: %s" % pega_local_ISS()['latitude'])
 
+    except Exception as e:
+        print("Tivemos problemas em atualizar a métrica!")
+        raise e
 
-if __name__ == '__main__': # Se o programa for executado diretamente
-    main() # Executa o main
-    exit(0) # Finaliza o programa
+def inicia_exporter():
+    try:
+        """
+        Iniciar o http server
+        """
+        start_http_server(8899)
+        return True
+    except Exception as e:
+        print("Tivemos problemas em iniciar o http server!")
+        raise e
+
+def main():
+    try:
+        """
+        A nossa função principal e que ira chamar as demais
+        """
+        inicia_exporter()
+        print("HTTP Server iniciado")
+        atualiza_metricas()
+    except Exception as e:
+        print("tivemos problemas na inicialização do nosso exporter")
+        exit(1)
+
+if __name__ == '__main__':
+    main()
+    exit(0)
