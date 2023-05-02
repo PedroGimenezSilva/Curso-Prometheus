@@ -58,6 +58,55 @@ precisamos adicionar o novo target no prometheus e realizar o restart do prometh
 sudo systemctl restart prometheus
 ```	  
 
+## adicionando um novo collector
 
+os collectors  são os responsáveis por capturar as métricas do sistema operacional. Por padrão, o Node Exporter vem com um monte de coletores habilitados, mas você pode habilitar outros, caso queira.
 
+[Collectors já habilitados](https://github.com/prometheus/node_exporter#enabled-by-default)
+
+[Collectors que podem ser habilitados](https://github.com/prometheus/node_exporter#disabled-by-default)
+
+### Adicionando um novo collector
+
+ criar o arquivo /etc/node_exporter/node_exporter_options e o diretório /etc/node_exporter/ caso ele não exista:
+```bash
+sudo mkdir /etc/node_exporter
+sudo vim /etc/node_exporter/node_exporter_options
+   ```
+
+Agora vamos adicionar a variável de ambiente OPTIONS no arquivo /etc/node_exporter/node_exporter_options:
+```bash
+OPTIONS="--collector.systemd"
+  ```
+
+Vamos ajustar as permissões do arquivo /etc/node_exporter/node_exporter_options:
+
+```bash
+sudo chown -R node_exporter:node_exporter /etc/node_exporter/
+ ```
+
+E no arquivo de configuração do serviço do Node Exporter para o SystemD, vamos adicionar a variável de ambiente OPTIONS e o arquivo vai ficar assim:
+
+```bash
+[Unit]
+Description=Node Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=node_exporter
+Group=node_exporter
+Type=simple
+EnvironmentFile=/etc/node_exporter/node_exporter_options
+ExecStart=/usr/local/bin/node_exporter $OPTIONS
+
+[Install]
+WantedBy=multi-user.target
+``` 
+
+Pronto, adicionamos o nosso novo arquivo que contém a variável de ambiente OPTIONS e agora vamos reiniciar o serviço do Node Exporter para que ele leia as novas configurações:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart node_exporter
+```
 [LINUXTIPS](https://github.com/badtuxx/DescomplicandoPrometheus)
